@@ -1,5 +1,14 @@
+ï»¿#include <cmath>
+#include <tuple>
+#include <iostream>
+#include <string>
+#include "Timer.h"  
 #include "tgaimage.h"
-#include <cmath>
+#include "model.h"
+#include "geometry.h"
+
+constexpr int width = 800;
+constexpr int height = 800;
 
 constexpr TGAColor white = { 255, 255, 255, 255 }; // attention, BGRA order
 constexpr TGAColor green = { 0, 255,   0, 255 };
@@ -9,32 +18,56 @@ constexpr TGAColor yellow = { 0, 200, 255, 255 };
 
 void line(int ax, int ay, int bx, int by, TGAImage& framebuffer, TGAColor color) 
 { 
-    //ÅĞ¶ÏÏß¶ÎµÄyÖáÊÇ·ñ±ÈxÖá¶¸ÇÍ
+    //åˆ¤æ–­çº¿æ®µçš„yè½´æ˜¯å¦æ¯”xè½´é™¡å³­
     bool steep = std::abs(ax - bx) < std::abs(ay - by);
-    //Èç¹ûÎª¶¸ÇÍÏßÔò½»»»xy×ø±ê£¨ºóĞø²ÉÑùÊ±¸ù¾İxÖá½øĞĞ²ÉÑù£¬½»»»xyÈÃyÖáÄÜÍêÈ«²ÉÑù£©
+    //å¦‚æœä¸ºé™¡å³­çº¿åˆ™äº¤æ¢xyåæ ‡ï¼ˆåç»­é‡‡æ ·æ—¶æ ¹æ®xè½´è¿›è¡Œé‡‡æ ·ï¼Œäº¤æ¢xyè®©yè½´èƒ½å®Œå…¨é‡‡æ ·ï¼‰
     if (steep) {
         std::swap(ax, ay);
         std::swap(bx, by);
     }
-    //È·±£ÊäÈëµÄÆğÊ¼µãÔÚÖÕµãµÄÓÒ²à
+    //ç¡®ä¿è¾“å…¥çš„èµ·å§‹ç‚¹åœ¨ç»ˆç‚¹çš„å³ä¾§
     if (ax > bx) {
         std::swap(ax, bx);
         std::swap(ay, by);
     }
-    //Ê¹ÓÃxÖáÏñËØ½øĞĞ¼ä¸ô²ÉÑù£¨²ÉÑùxÖáµÄËùÓĞµã£¬ÈçÎª¶¸ÇÍÇúÏßÔòÔÚÉÏÎÄÖĞ½»»»ÁËxy£©
+
+	//ä¼˜åŒ–ç­–ç•¥ï¼šå‡å°‘ä¸€æ¬¡yä»æµ®ç‚¹åˆ°æ•´æ•°çš„è½¬æ¢
+	float current_y = ay;
+	//float error = 0;//è¯¯å·®å€¼ç”¨äºå¤„ç†å››èˆäº”å…¥
+	int ierror = 0;//æ•´æ•°ä¼˜åŒ–æ–¹æ³• 
+
+    //ä½¿ç”¨xè½´åƒç´ è¿›è¡Œé—´éš”é‡‡æ ·ï¼ˆé‡‡æ ·xè½´çš„æ‰€æœ‰ç‚¹ï¼Œå¦‚ä¸ºé™¡å³­æ›²çº¿åˆ™åœ¨ä¸Šæ–‡ä¸­äº¤æ¢äº†xyï¼‰
     for (int x = ax; x <=bx ; x ++) {
         
-        //tÖµ¼ÆËã·½Ê½ÎªxÒÆ¶¯µ½Á½µãÖĞ¼äµÄÄÄ¸öÎ»ÖÃÁË
+        //tå€¼è®¡ç®—æ–¹å¼ä¸ºxç§»åŠ¨åˆ°ä¸¤ç‚¹ä¸­é—´çš„å“ªä¸ªä½ç½®äº†
         float t = (x - ax) / static_cast<float>(bx - ax);
         int y = std::round(ay + (by - ay) * t);
-        //Èç¹ûÎª¶¸ÇÍÏß¶ÎÔòÓÉÓÚÉÏ·½½»»»ÁËxyµÄÊıÖµ£¬ÔÚ»æÖÆÊ±Ò²Òª½«Á½ÕßÎ»ÖÃ½»»»»ØÀ´
+       
+        //å¦‚æœä¸ºé™¡å³­çº¿æ®µåˆ™ç”±äºä¸Šæ–¹äº¤æ¢äº†xyçš„æ•°å€¼ï¼Œåœ¨ç»˜åˆ¶æ—¶ä¹Ÿè¦å°†ä¸¤è€…ä½ç½®äº¤æ¢å›æ¥
         if (steep)
             framebuffer.set(y, x, color);
         else
             framebuffer.set(x, y, color);
-    }
 
-    //¶ÔÊ¹ÓÃÖØĞÄ×ø±êµÄ·½Ê½ÔÚÖ±ÏßÉÏ½øĞĞµÈ¾àÀë²ÉÑù
+		//error += (by - ay) / static_cast<float>(bx - ax);
+		////å½“è¯¯å·®å€¼å¤§äº0.5æ—¶å››èˆäº”å…¥ï¼Œyè½´ç§»åŠ¨ä¸€ä¸ªåƒç´ 
+		//if (error > 0.5) {
+		//	y += by > ay ? 1: -1 ;
+		//	error -= 1.0;
+		//}
+
+		//æ•´æ•°ä¼˜åŒ–æ–¹æ³•
+		ierror += std::abs(by - ay);
+        if (ierror >= (bx - ax)) {
+            current_y += by > ay ? 1 : -1;
+            ierror -= (bx - ax);
+        }
+		//ä¼˜åŒ–æ‰ifåˆ¤æ–­
+        /*y += (by > ay ? 1 : -1) * (ierror > bx - ax);
+        ierror -=  (bx - ax) * (ierror > bx - ax);*/
+	}
+
+    //å¯¹ä½¿ç”¨é‡å¿ƒåæ ‡çš„æ–¹å¼åœ¨ç›´çº¿ä¸Šè¿›è¡Œç­‰è·ç¦»é‡‡æ ·
     //for (float t = 0; t < 1; t += .02) {
     //    int x = std::round(ax + (bx - ax) * t);
     //    int y = std::round(ay + (by - ay) * t);+
@@ -42,23 +75,61 @@ void line(int ax, int ay, int bx, int by, TGAImage& framebuffer, TGAColor color)
     //}
 }
 
-int main(int argc, char** argv) {
-    constexpr int width = 64;
-    constexpr int height = 64;
-    TGAImage framebuffer(width, height, TGAImage::RGB);
+//æ­£äº¤æŠ•å½±å˜åŒ–å°†[-1,1]åŒºé—´çš„åæ ‡æ˜ å°„åˆ°å±å¹•åæ ‡
+std::tuple<int,int> project(vec3 v) {
+	return { ((v.x + 1.) * width / 2.),
+			 ((v.y + 1.) * height / 2.) }; 
+}
 
-    int ax = 7, ay = 3;
-    int bx = 12, by = 37;
-    int cx = 62, cy = 53;
+int main(int argc, char** argv) {  
+   std::string modelPath;
+   
+   // å¦‚æœæ²¡æœ‰æä¾›å‘½ä»¤è¡Œå‚æ•°ï¼Œæç¤ºç”¨æˆ·è¾“å…¥æˆ–ä½¿ç”¨é»˜è®¤æ¨¡å‹
+   if (argc != 2) {  
+       std::cout << "è¯·è¾“å…¥æ¨¡å‹æ–‡ä»¶è·¯å¾„ (æˆ–ç›´æ¥æŒ‰Enterä½¿ç”¨é»˜è®¤çš„diablo3_pose.obj): ";
+       std::getline(std::cin, modelPath);
+       
+       if (modelPath.empty()) {
+           modelPath = "obj/diablo3_pose/diablo3_pose.obj";
+           std::cout << "ä½¿ç”¨é»˜è®¤æ¨¡å‹: " << modelPath << std::endl;
+       }
+   } else {
+       modelPath = argv[1];
+   }
 
-    line(ax, ay, bx, by, framebuffer, blue);
-    line(bx, by, cx, cy, framebuffer, red);
-    line(cx, cy, ax, ay, framebuffer, green);
+   Model model(modelPath);
+   
+   // æ£€æŸ¥æ¨¡å‹æ˜¯å¦æˆåŠŸåŠ è½½
+   if (model.nverts() == 0) {
+       std::cerr << "é”™è¯¯: æ— æ³•åŠ è½½æ¨¡å‹æ–‡ä»¶ '" << modelPath << "'" << std::endl;
+       std::cerr << "è¯·ç¡®ä¿æ–‡ä»¶è·¯å¾„æ­£ç¡®ä¸”æ–‡ä»¶å­˜åœ¨ã€‚" << std::endl;
+       return 1;
+   }
+   
+   std::cout << "æˆåŠŸåŠ è½½æ¨¡å‹: é¡¶ç‚¹æ•°=" << model.nverts() << ", é¢æ•°=" << model.nfaces() << std::endl;
+   
+   TGAImage framebuffer(width, height, TGAImage::RGB);  
 
-    framebuffer.set(ax, ay, red);
-    framebuffer.set(bx, by, white);
-    framebuffer.set(cx, cy, white);
+   //ç»˜åˆ¶çº¿æ¡†
+   {  
+       Timer t;   
+       for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
+           auto [ax, ay] = project(model.vert(i, 0));
+           auto [bx, by] = project(model.vert(i, 1));
+           auto [cx, cy] = project(model.vert(i, 2));
+           line(ax, ay, bx, by, framebuffer, red);
+           line(bx, by, cx, cy, framebuffer, red);
+           line(cx, cy, ax, ay, framebuffer, red);
+       }
 
-    framebuffer.write_tga_file("framebuffer.tga");
-    return 0;
+       for (int i = 0; i < model.nverts(); i++) { // iterate through all vertices
+           vec3 v = model.vert(i);            // get i-th vertex
+           auto [x, y] = project(v);          // project it to the screen
+           framebuffer.set(x, y, white);
+       }
+   }  
+
+   framebuffer.write_tga_file("framebuffer.tga");
+   std::cout << "æ¸²æŸ“å®Œæˆï¼Œè¾“å‡ºæ–‡ä»¶: framebuffer.tga" << std::endl;
+   return 0;  
 }
