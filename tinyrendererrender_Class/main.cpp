@@ -16,6 +16,46 @@ constexpr TGAColor red = { 0,   0, 255, 255 };
 constexpr TGAColor blue = { 255, 128,  64, 255 };
 constexpr TGAColor yellow = { 0, 200, 255, 255 };
 
+
+//使用扫描线算法绘制三角形
+void Scanlinetriangle(int ax, int ay, int bx, int by,int cx , int cy ,TGAImage &framebuffer,TGAColor color) {
+    
+    //使用三个顶点的y坐标对三个的顶点进行排序，从最高到最低
+    if (ay > by) { std::swap(ax, bx); std::swap(ay, by); }
+    if (ay > cy) { std::swap(ax, cx); std::swap(ay, cy); }
+    if (by > cy) { std::swap(bx, cx); std::swap(by, cy); }
+    
+    int total_height = cy - ay;//获取三角形的高度
+
+	//分开处理三角形的上半部分和下半部分，因为上下的左右边界不同，上半部分的右边界是 a-b，下半部分的右边界是 b-c。
+
+    if (ay != by) {//判断三角形上半部分是否存在（即a和b不是同一水平线）。
+        int segment_height = by - ay;//上半部分的高度。
+        for (int y = ay; y <= by; y++) { //从a点y到b点y逐行扫描。
+            int x1 = ax + ((cx - ax) * (y - ay)) / total_height;//a到c的插值，表示当前y在ac边上的x坐标。
+            int x2 = ax + ((bx - ax) * (y - ay)) / segment_height;//a到b的插值，表示当前y在ab边上的x坐标。
+            for (int x = std::min(x1, x2); x < std::max(1, 2); x++) {
+                framebuffer.set(x, y, color);
+            }
+        }
+    }
+    if (by != cy) {
+        int segment_height = cy - by;
+        for (int y = by; y <= cy; y++) {
+            int x1 = ax + ((cx - ax) * (y - ay)) / total_height;//a到c的插值，表示当前y在ac边上的x坐标。
+            int x2 = bx + ((cx - bx) * (y - by)) / segment_height;//b到c的插值，表示当前y在bc边上的x坐标。
+            for (int x = std::min(x1, x2); x < std::max(x1, x2); x++) {
+                framebuffer.set(x, y, color);
+            }
+        }
+    }
+}
+
+void Moderntriangle(int ax, int ay, int bx, int by,int cx , int cy ,TGAImage &framebuffer,TGAColor color) {
+    
+   
+}
+
 void line(int ax, int ay, int bx, int by, TGAImage& framebuffer, TGAColor color) 
 { 
     //判断线段的y轴是否比x轴陡峭
@@ -111,23 +151,27 @@ int main(int argc, char** argv) {
    TGAImage framebuffer(width, height, TGAImage::RGB);  
 
    //绘制线框
-   {  
-       Timer t;   
-       for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
-           auto [ax, ay] = project(model.vert(i, 0));
-           auto [bx, by] = project(model.vert(i, 1));
-           auto [cx, cy] = project(model.vert(i, 2));
-           line(ax, ay, bx, by, framebuffer, red);
-           line(bx, by, cx, cy, framebuffer, red);
-           line(cx, cy, ax, ay, framebuffer, red);
-       }
+   //{  
+   //    Timer t;   
+   //    for (int i = 0; i < model.nfaces(); i++) { // iterate through all triangles
+   //        auto [ax, ay] = project(model.vert(i, 0));
+   //        auto [bx, by] = project(model.vert(i, 1));
+   //        auto [cx, cy] = project(model.vert(i, 2));
+   //        line(ax, ay, bx, by, framebuffer, red);
+   //        line(bx, by, cx, cy, framebuffer, red);
+   //        line(cx, cy, ax, ay, framebuffer, red);
+   //    }
 
-       for (int i = 0; i < model.nverts(); i++) { // iterate through all vertices
-           vec3 v = model.vert(i);            // get i-th vertex
-           auto [x, y] = project(v);          // project it to the screen
-           framebuffer.set(x, y, white);
-       }
-   }  
+   //    for (int i = 0; i < model.nverts(); i++) { // iterate through all vertices
+   //        vec3 v = model.vert(i);            // get i-th vertex
+   //        auto [x, y] = project(v);          // project it to the screen
+   //        framebuffer.set(x, y, white);
+   //    }
+   //}  
+    
+   Scanlinetriangle(7, 45, 35, 100, 45, 60, framebuffer, red);
+   Scanlinetriangle(120, 35, 90, 5, 45, 110, framebuffer, white);
+   Scanlinetriangle(115, 83, 80, 90, 85, 120, framebuffer, green);
 
    framebuffer.write_tga_file("framebuffer.tga");
    std::cout << "渲染完成，输出文件: framebuffer.tga" << std::endl;
